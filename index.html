@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Мини проигрыватель</title>
+
+    <link rel = "icon" type="image/ico" href="1441800267_youtube_47086.ico">
+
+    <style>
+        /* --- Общие стили для страницы --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #e01c16; /* Цвет YouTube */
+            margin-top: 0;
+        }
+
+        p {
+            color: #4282d6;
+            font-size: 16px;
+        }
+
+        /* --- Стили ввода --- */
+        .input-group {
+            display: flex;
+            margin-top: 20px;
+            gap: 10px;
+        }
+
+        #youtube-url {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #6695dd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        #youtube-url:focus {
+            outline: none;
+            border-color: #1877f2;
+        }
+
+        #load-video-btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #ff0000;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #load-video-btn:hover {
+            background-color: #d92b26;
+        }
+
+        #player-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 426px;  /* Ширина 16:9 */
+            height: 240px; /* Высота 16:9 */
+            background-color: #000;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none; /* Изначально скрыт */
+            z-index: 1000; /* Поверх всех элементов */
+            flex-direction: column;
+        }
+
+        #player-header {
+            background-color: #282828;
+            color: #fff;
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            cursor: move; /* Курсор для перетаскивания */
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            user-select: none; 
+        }
+        
+        #player-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        #player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Мини-проигрыватель YouTube</h1>
+        <p>Вставте ссылку на ютуб </p>
+        <div class="input-group">
+            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=...">
+            <button id="load-video-btn">Загрузить</button>
+        </div>
+    </div>
+
+    <div id="player-container">
+        <div id="player-header">:: Перетащить ::</div>
+        <div id="player-wrapper">
+             <div id="player"></div> <!-- YouTube API вставит iframe сюда -->
+        </div>
+    </div>
+
+    <script>
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        let player; 
+        const urlInput = document.getElementById('youtube-url');
+        const loadBtn = document.getElementById('load-video-btn');
+        const playerContainer = document.getElementById('player-container');
+
+        function extractVideoID(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            if (match && match[2].length === 11) {
+                return match[2];
+            } else {
+                return null;
+            }
+        }
+
+        function onYouTubeIframeAPIReady() {
+        }
+
+        function loadVideo() {
+            const videoUrl = urlInput.value;
+            const videoId = extractVideoID(videoUrl);
+
+            if (!videoId) {
+                alert('Не удалось извлечь ID видео. Проверьте ссылку.');
+                return;
+            }
+
+            playerContainer.style.display = 'flex';
+
+            if (!player) {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        'autoplay': 1,      // Автоматическое воспроизведение
+                        'controls': 1,      // Показать элементы управления
+                        'playsinline': 1    
+                    }
+                });
+            } else {
+                player.loadVideoById(videoId);
+            }
+        }
+        
+       
+        loadBtn.addEventListener('click', loadVideo);
+        urlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadVideo();
+            }
+        });
+
+
+        const header = document.getElementById('player-header');
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+
+            offsetX = e.clientX - playerContainer.offsetLeft;
+            offsetY = e.clientY - playerContainer.offsetTop;
+            
+            header.style.backgroundColor = '#555';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+
+            let newX = e.clientX - offsetX;
+            let newY = e.clientY - offsetY;
+            
+            // Устанавливаем новые координаты
+            playerContainer.style.left = `${newX}px`;
+            playerContainer.style.top = `${newY}px`;
+            
+            playerContainer.style.bottom = 'auto';
+            playerContainer.style.right = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                header.style.backgroundColor = '#282828';
+            }
+        });
+    </script>
+</body>
+</html>
+```
